@@ -1,0 +1,252 @@
+@import "tailwindcss";
+
+:root {
+  --background: #18090f;
+  --foreground: #f2edf0;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* ============================================================
+   Elevate Marketing CRM — design tokens
+   ============================================================ */
+
+.crm-root {
+  --crm-bg: #18090f;
+  --crm-sidebar: #1a0a10;
+  --crm-sidebar-active: #cafb2a;
+  --crm-panel: #241019;
+  --crm-panel-raised: #2b111d;
+  --crm-lime: #cafb2a;
+  --crm-lime-dim: #8fb81f;
+  --crm-cyan: #58d9f0;
+  --crm-text: #f2edf0;
+  --crm-text-dim: #a99ba3;
+  --crm-text-faint: #6f5c66;
+  --crm-border: #3c2630;
+  --crm-border-strong: #55394a;
+  --crm-green: #5fe08a;
+  --crm-green-glow: rgba(95, 224, 138, 0.35);
+  --crm-red: #f2546b;
+  --crm-red-glow: rgba(242, 84, 107, 0.3);
+  --crm-amber: #f5b942;
+  --crm-amber-glow: rgba(245, 185, 66, 0.28);
+  --crm-neutral: #8a7b84;
+
+  background: var(--crm-bg);
+  color: var(--crm-text);
+  min-height: 100vh;
+  background-image:
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(202, 251, 42, 0.05), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 0%, rgba(88, 217, 240, 0.05), transparent 55%);
+}
+
+.crm-root ::selection {
+  background: var(--crm-lime);
+  color: #140208;
+}
+
+.crm-heading {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.crm-panel {
+  background: var(--crm-panel);
+  border: 1px solid var(--crm-border);
+  border-radius: 6px;
+}
+
+.crm-panel-raised {
+  background: var(--crm-panel-raised);
+  border: 1px solid var(--crm-border);
+  border-radius: 6px;
+}
+
+.crm-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--crm-text-dim);
+}
+
+.crm-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--crm-text-dim);
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.crm-nav-item:hover {
+  color: var(--crm-text);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--crm-border);
+}
+
+.crm-nav-item.active {
+  background: var(--crm-lime);
+  color: #140208;
+  box-shadow: 0 0 0 1px var(--crm-lime), 0 0 18px rgba(202, 251, 42, 0.25);
+}
+
+.crm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.crm-btn-primary {
+  background: var(--crm-lime);
+  color: #140208;
+}
+.crm-btn-primary:hover {
+  background: #d9ff5a;
+  box-shadow: 0 0 16px rgba(202, 251, 42, 0.35);
+}
+.crm-btn-primary:disabled {
+  background: var(--crm-text-faint);
+  color: #140208;
+  cursor: not-allowed;
+}
+
+.crm-btn-ghost {
+  background: transparent;
+  color: var(--crm-text-dim);
+  border-color: var(--crm-border-strong);
+}
+.crm-btn-ghost:hover {
+  color: var(--crm-text);
+  border-color: var(--crm-cyan);
+}
+
+.crm-btn-danger {
+  background: transparent;
+  color: var(--crm-red);
+  border-color: var(--crm-red);
+}
+.crm-btn-danger:hover {
+  background: rgba(242, 84, 107, 0.1);
+}
+
+.crm-input {
+  width: 100%;
+  background: var(--crm-bg);
+  border: 1px solid var(--crm-border-strong);
+  border-radius: 4px;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.8125rem;
+  color: var(--crm-text);
+}
+.crm-input:focus {
+  outline: none;
+  border-color: var(--crm-cyan);
+  box-shadow: 0 0 0 1px var(--crm-cyan);
+}
+.crm-input::placeholder {
+  color: var(--crm-text-faint);
+}
+
+.crm-select {
+  background: var(--crm-bg);
+}
+
+.crm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid;
+}
+
+.crm-badge-green {
+  color: var(--crm-green);
+  border-color: var(--crm-green);
+  background: rgba(95, 224, 138, 0.08);
+  box-shadow: 0 0 10px var(--crm-green-glow);
+}
+.crm-badge-red {
+  color: var(--crm-red);
+  border-color: var(--crm-red);
+  background: rgba(242, 84, 107, 0.08);
+}
+.crm-badge-amber {
+  color: var(--crm-amber);
+  border-color: var(--crm-amber);
+  background: rgba(245, 185, 66, 0.08);
+}
+.crm-badge-neutral {
+  color: var(--crm-neutral);
+  border-color: var(--crm-border-strong);
+}
+.crm-badge-cyan {
+  color: var(--crm-cyan);
+  border-color: var(--crm-cyan);
+  background: rgba(88, 217, 240, 0.08);
+}
+
+.crm-glow-green {
+  box-shadow: 0 0 0 1px var(--crm-green), 0 0 16px var(--crm-green-glow);
+}
+.crm-glow-lime {
+  box-shadow: 0 0 0 1px var(--crm-lime), 0 0 16px rgba(202, 251, 42, 0.22);
+}
+
+.crm-divider {
+  border-color: var(--crm-border);
+}
+
+.crm-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.crm-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.crm-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--crm-border-strong);
+  border-radius: 4px;
+}

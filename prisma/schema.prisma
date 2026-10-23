@@ -1,0 +1,387 @@
+// Elevate Marketing CRM — data model
+// SQLite for local/dev persistence with zero external credentials.
+// Swap `provider`/`url` below to "postgresql" + a Supabase/Postgres
+// connection string for production — the schema itself is portable.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- People & access ----------
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("TEAM") // PARTNER | TEAM | ADMIN
+  jobTitle     String?
+  phone        String?
+  active       Boolean  @default(true)
+  availability String   @default("AVAILABLE") // AVAILABLE | LIMITED | UNAVAILABLE
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  partner           Partner?
+  assignedProjects   ProjectAssignee[]
+  assignedTasks      Task[]             @relation("TaskAssignee")
+  createdTasks       Task[]             @relation("TaskCreator")
+  uploadedDocuments  Document[]
+  activityLogs       ActivityLog[]
+  notifications      Notification[]
+  announcements      Announcement[]
+  clientsAssigned    Client[]           @relation("ClientAssignedTeamMember")
+  sessions           Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Partner {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  role             String
+  shareholdingPct  Float    @default(0)
+  profitSharePct   Float    @default(0)
+  responsibilities String?
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  allocationSplits ProfitAllocationSplit[]
+  tasks            Task[]                   @relation("TaskPartner")
+}
+
+// ---------- Clients ----------
+
+model Client {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Business information
+  businessName String
+  tradingName  String?
+  industry     String?
+  description  String?
+  address      String?
+  website      String?
+  socials      String? // JSON string: { instagram, linkedin, tiktok, ... }
+  logoUrl      String?
+
+  // Contact information
+  mainContactName     String?
+  jobTitle            String?
+  email               String?
+  phone               String?
+  preferredContact    String? // EMAIL | PHONE | WHATSAPP
+  internalNotes       String?
+
+  // Commercial information
+  servicePackage      String?
+  servicesProvided    String? // JSON string array
+  monthlyRetainerPence Int?
+  oneOffFeesPence      Int?
+  billingFrequency    String? // MONTHLY | QUARTERLY | ONE_OFF | ANNUAL
+  contractStart       DateTime?
+  contractEnd         DateTime?
+  renewalDate         DateTime?
+  noticePeriodDays    Int?
+  contractStatus      String   @default("DRAFT") // DRAFT | AWAITING_SIGNATURE | ACTIVE | EXPIRED | TERMINATED
+  assignedTeamMemberId String?
+  assignedTeamMember   User?   @relation("ClientAssignedTeamMember", fields: [assignedTeamMemberId], references: [id])
+
+  // Management information
+  onboardingDate DateTime?
+  status         String    @default("ONBOARDING") // ONBOARDING | ACTIVE | INACTIVE | COMPLETED | ARCHIVED
+  objectives     String?
+  priorities     String?
+  nextReviewDate DateTime?
+  portalToken    String    @unique @default(cuid())
+
+  contacts    ClientContact[]
+  projects    Project[]
+  tasks       Task[]
+  documents   Document[]
+  contracts   Contract[]
+  invoices    Invoice[]
+  activityLogs ActivityLog[]
+}
+
+model ClientContact {
+  id        String  @id @default(cuid())
+  clientId  String
+  client    Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name      String
+  jobTitle  String?
+  email     String?
+  phone     String?
+  notes     String?
+  isPrimary Boolean @default(false)
+  createdAt DateTime @default(now())
+}
+
+// ---------- Projects & tasks ----------
+
+model Project {
+  id              String   @id @default(cuid())
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  serviceCategory String?
+  startDate       DateTime?
+  deadline        DateTime?
+  status          String   @default("NOT_STARTED") // NOT_STARTED | IN_PROGRESS | AWAITING_CLIENT | BLOCKED | COMPLETED | ARCHIVED
+  priority        String   @default("MEDIUM") // LOW | MEDIUM | HIGH | URGENT
+  progressPct     Int      @default(0)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  assignees   ProjectAssignee[]
+  tasks       Task[]
+  documents   Document[]
+  milestones  Milestone[]
+  invoices    Invoice[]
+}
+
+model ProjectAssignee {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+model Milestone {
+  id        String    @id @default(cuid())
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  dueDate   DateTime?
+  done      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+}
+
+model Task {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  dueDate       DateTime?
+  priority      String    @default("MEDIUM") // LOW | MEDIUM | HIGH | URGENT
+  status        String    @default("TODO") // TODO | IN_PROGRESS | AWAITING_CLIENT | BLOCKED | COMPLETED
+  category      String    @default("CLIENT") // CLIENT | INTERNAL | PARTNER | ADMIN | FINANCE | SALES
+  assigneeId    String?
+  assignee      User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdById   String?
+  createdBy     User?     @relation("TaskCreator", fields: [createdById], references: [id])
+  clientId      String?
+  client        Client?   @relation(fields: [clientId], references: [id])
+  projectId     String?
+  project       Project?  @relation(fields: [projectId], references: [id])
+  partnerId     String?
+  partner       Partner?  @relation("TaskPartner", fields: [partnerId], references: [id])
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// ---------- Documents, contracts, invoices ----------
+
+model Document {
+  id          String   @id @default(cuid())
+  name        String
+  category    String   // CONTRACT | INVOICE | BRIEF | REPORT | ASSET | OTHER
+  filePath    String
+  mimeType    String?
+  sizeBytes   Int?
+  version     Int      @default(1)
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id])
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id])
+  uploadedById String?
+  uploadedBy  User?    @relation(fields: [uploadedById], references: [id])
+  createdAt   DateTime @default(now())
+
+  contractFileFor  Contract? @relation("ContractFile")
+  contractSignedFor Contract? @relation("ContractSignedFile")
+  invoiceFileFor   Invoice?  @relation("InvoiceFile")
+}
+
+model ContractTemplate {
+  id           String   @id @default(cuid())
+  name         String
+  bodyMarkdown String
+  placeholders String? // JSON array of placeholder keys
+  createdAt    DateTime @default(now())
+
+  contracts Contract[]
+}
+
+model Contract {
+  id              String   @id @default(cuid())
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name            String
+  templateId      String?
+  template        ContractTemplate? @relation(fields: [templateId], references: [id])
+  bodyMarkdown    String?
+  valuePence      Int?
+  startDate       DateTime?
+  endDate         DateTime?
+  status          String   @default("DRAFT") // DRAFT | READY | SENT | VIEWED | PARTIALLY_SIGNED | SIGNED | DECLINED | EXPIRED | TERMINATED
+  signingToken    String   @unique @default(cuid())
+  sentAt          DateTime?
+  viewedAt        DateTime?
+  fileDocumentId  String?  @unique
+  fileDocument    Document? @relation("ContractFile", fields: [fileDocumentId], references: [id])
+  signedFileDocumentId String? @unique
+  signedFileDocument   Document? @relation("ContractSignedFile", fields: [signedFileDocumentId], references: [id])
+  renewedFromId   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  signatories ContractSignatory[]
+}
+
+model ContractSignatory {
+  id            String    @id @default(cuid())
+  contractId    String
+  contract      Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  name          String
+  email         String
+  status        String    @default("PENDING") // PENDING | VIEWED | SIGNED | DECLINED
+  signedAt      DateTime?
+  ipAddress     String?
+  typedSignature String?
+  drawnSignature String?  // data URL of canvas signature
+  consentGiven  Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+}
+
+model Invoice {
+  id             String    @id @default(cuid())
+  number         String    @unique
+  clientId       String
+  client         Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?  @relation(fields: [projectId], references: [id])
+  description    String?
+  issueDate      DateTime  @default(now())
+  dueDate        DateTime?
+  amountPence    Int
+  vatPence       Int       @default(0)
+  totalPence     Int
+  status         String    @default("DRAFT") // DRAFT | SENT | UNPAID | PARTIALLY_PAID | PAID | OVERDUE | VOID
+  fileDocumentId String?   @unique
+  fileDocument   Document? @relation("InvoiceFile", fields: [fileDocumentId], references: [id])
+  ocrExtracted   Boolean   @default(false)
+  ocrConfidence  Float?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  payments Payment[]
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amountPence Int
+  paymentDate DateTime @default(now())
+  method      String?  // BANK_TRANSFER | CARD | CASH | OTHER
+  status      String   @default("CONFIRMED") // CONFIRMED | REFUNDED | REVERSED
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  description String
+  amountPence Int
+  date        DateTime @default(now())
+  category    String?
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model ProfitAllocation {
+  id                     String   @id @default(cuid())
+  periodLabel            String
+  distributableAmountPence Int
+  paid                   Boolean  @default(false)
+  createdAt              DateTime @default(now())
+
+  splits ProfitAllocationSplit[]
+}
+
+model ProfitAllocationSplit {
+  id           String           @id @default(cuid())
+  allocationId String
+  allocation   ProfitAllocation @relation(fields: [allocationId], references: [id], onDelete: Cascade)
+  partnerId    String
+  partner      Partner          @relation(fields: [partnerId], references: [id])
+  pct          Float
+  amountPence  Int
+}
+
+// ---------- Activity, notifications, settings ----------
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String
+  entityType  String
+  entityId    String?
+  description String
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id               String   @id @default(cuid())
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id])
+  type             String
+  title            String
+  body             String?
+  relatedEntityType String?
+  relatedEntityId  String?
+  read             Boolean  @default(false)
+  createdAt        DateTime @default(now())
+}
+
+model Announcement {
+  id         String   @id @default(cuid())
+  title      String
+  body       String
+  authorId   String?
+  author     User?    @relation(fields: [authorId], references: [id])
+  createdAt  DateTime @default(now())
+}
+
+model Setting {
+  key       String   @id
+  value     String // JSON-encoded
+  updatedAt DateTime @updatedAt
+}
