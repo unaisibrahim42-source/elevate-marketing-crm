@@ -4,6 +4,11 @@ import { prisma } from "@/lib/db";
 import CrmShell from "@/components/crm/CrmShell";
 import { generateReminderNotifications } from "@/lib/reminders";
 
+// Every page under here reads the logged-in user's data — never prerender
+// or cache any of it. Set at the layout level so it covers the whole
+// subtree instead of needing `export const dynamic` on every page file.
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   if (!user) redirect("/crm/login");

@@ -1,14 +1,12 @@
 // Elevate Marketing CRM — data model
-// SQLite for local/dev persistence with zero external credentials.
-// Swap `provider`/`url` below to "postgresql" + a Supabase/Postgres
-// connection string for production — the schema itself is portable.
+// Postgres (e.g. Neon/Supabase) via DATABASE_URL.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
