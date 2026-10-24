@@ -36,6 +36,7 @@ model User {
   announcements      Announcement[]
   clientsAssigned    Client[]           @relation("ClientAssignedTeamMember")
   sessions           Session[]
+  leadsOwned         Lead[]             @relation("LeadOwner")
 }
 
 model Session {
@@ -62,6 +63,7 @@ model Partner {
 
   allocationSplits ProfitAllocationSplit[]
   tasks            Task[]                   @relation("TaskPartner")
+  withdrawals      PartnerWithdrawal[]
 }
 
 // ---------- Clients ----------
@@ -339,6 +341,43 @@ model ProfitAllocationSplit {
   partner      Partner          @relation(fields: [partnerId], references: [id])
   pct          Float
   amountPence  Int
+}
+
+// A partner manually logging what they're taking out this time and what
+// they're leaving in the business — a personal ledger, not a calculation.
+// Shareholding/profit-share % are shown alongside it only as a reference
+// figure; nothing here is derived from them automatically, and nothing
+// here feeds into Finance's revenue/invoice totals.
+model PartnerWithdrawal {
+  id              String   @id @default(cuid())
+  partnerId       String
+  partner         Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  amountPence     Int
+  reinvestedPence Int      @default(0)
+  date            DateTime @default(now())
+  note            String?
+  createdAt       DateTime @default(now())
+}
+
+// ---------- Leads ----------
+
+model Lead {
+  id                 String    @id @default(cuid())
+  companyName        String
+  contactName        String?
+  source             String?
+  stage              String    @default("NEW_LEAD") // NEW_LEAD | NEGOTIATION | PROPOSAL_SENT | WON | LOST
+  estValuePerMonthPence Int?
+  startDate          DateTime?
+  contractSentDate   DateTime?
+  nextFollowUpDate   DateTime?
+  ownerId            String?
+  owner              User?     @relation("LeadOwner", fields: [ownerId], references: [id])
+  contactNo          String?
+  email              String?
+  otherInfo          String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
 
 // ---------- Activity, notifications, settings ----------

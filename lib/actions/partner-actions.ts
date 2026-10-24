@@ -108,3 +108,53 @@ export async function toggleAllocationPaidAction(allocationId: string, paid: boo
   });
   revalidatePath("/crm/partners");
 }
+
+// A partner logging what they're personally taking out and what they're
+// leaving in the business this time — a manual ledger entry, not a
+// calculation. Deliberately never touches Invoice/Payment data, so it can
+// never change anything on the Finance page.
+export async function createWithdrawalAction(partnerId: string, formData: FormData) {
+  const user = await requireUser();
+  const amount = str(formData, "amount");
+  if (!amount) return;
+
+  const partner = await prisma.partner.findUnique({ where: { id: partnerId } });
+  if (!partner) return;
+
+  const withdrawal = await prisma.partnerWithdrawal.create({
+    data: {
+      partnerId,
+      amountPence: Math.round(Number(amount) * 100),
+      reinvestedPence: Math.round(Number(str(formData, "reinvested") ?? "0") * 100),
+      date: str(formData, "date") ? new Date(str(formData, "date")!) : new Date(),
+      note: str(formData, "note"),
+    },
+  });
+
+  await logActivity({
+    userId: user.id,
+    action: "CREATE",
+    entityType: "PartnerWithdrawal",
+    entityId: withdrawal.id,
+    description: `${partner.name} logged a withdrawal of £${(withdrawal.amountPence / 100).toFixed(2)}${
+      withdrawal.reinvestedPence > 0 ? ` and reinvested £${(withdrawal.reinvestedPence / 100).toFixed(2)}` : ""
+    }`,
+  });
+
+  revalidatePath("/crm/partners");
+  revalidatePath(`/crm/partners/${partnerId}`);
+}
+
+export async function deleteWithdrawalAction(partnerId: string, withdrawalId: string) {
+  const user = await requireUser();
+  await prisma.partnerWithdrawal.delete({ where: { id: withdrawalId } }).catch(() => null);
+  await logActivity({
+    userId: user.id,
+    action: "DELETE",
+    entityType: "PartnerWithdrawal",
+    entityId: withdrawalId,
+    description: `${user.name} removed a withdrawal entry`,
+  });
+  revalidatePath("/crm/partners");
+  revalidatePath(`/crm/partners/${partnerId}`);
+}

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { Panel, Badge, EmptyState, PriorityDot } from "@/components/crm/ui";
+import { Panel, EmptyState, PriorityDot } from "@/components/crm/ui";
 import { formatPence } from "@/lib/money";
 import { formatUKDate, isOverdue } from "@/lib/dates";
 import { updatePartnerAction } from "@/lib/actions/partner-actions";
@@ -16,7 +16,7 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
     include: {
       user: true,
       tasks: { include: { client: true, project: true }, orderBy: { dueDate: "asc" } },
-      allocationSplits: { include: { allocation: true }, orderBy: { allocation: { createdAt: "desc" } } },
+      withdrawals: { orderBy: { date: "desc" } },
     },
   });
 
@@ -34,6 +34,8 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
   const completed = partner.tasks.filter((t) => t.status === "COMPLETED");
   const outstanding = partner.tasks.filter((t) => t.status !== "COMPLETED");
   const overdue = outstanding.filter((t) => isOverdue(t.dueDate));
+  const totalWithdrawn = partner.withdrawals.reduce((s, w) => s + w.amountPence, 0);
+  const totalReinvested = partner.withdrawals.reduce((s, w) => s + w.reinvestedPence, 0);
 
   const updateAction = updatePartnerAction.bind(null, partner.id);
   const createForPartner = async (formData: FormData) => {
@@ -107,20 +109,37 @@ export default async function PartnerDetailPage({ params }: { params: Promise<{ 
           </div>
         </Panel>
 
-        <Panel title="Distribution History">
-          {partner.allocationSplits.length === 0 ? (
-            <EmptyState message="No allocations yet." />
+        <Panel title="Withdrawal History">
+          <div className="flex justify-between text-sm mb-3 pb-3 border-b" style={{ borderColor: "var(--crm-border)" }}>
+            <span style={{ color: "var(--crm-text-dim)" }}>
+              Total out: <span style={{ color: "var(--crm-amber)" }}>{formatPence(totalWithdrawn)}</span>
+            </span>
+            <span style={{ color: "var(--crm-text-dim)" }}>
+              Reinvested: <span style={{ color: "var(--crm-green)" }}>{formatPence(totalReinvested)}</span>
+            </span>
+          </div>
+          {partner.withdrawals.length === 0 ? (
+            <EmptyState message="No withdrawals logged yet." />
           ) : (
             <ul className="space-y-2.5">
-              {partner.allocationSplits.map((s) => (
-                <li key={s.id} className="flex items-center justify-between text-sm">
-                  <span style={{ color: "var(--crm-text-dim)" }}>{s.allocation.periodLabel}</span>
-                  <span style={{ color: "var(--crm-cyan)" }}>{formatPence(s.amountPence)}</span>
-                  <Badge status={s.allocation.paid ? "PAID" : "PENDING"} />
+              {partner.withdrawals.map((w) => (
+                <li key={w.id} className="text-sm">
+                  <div className="flex items-center justify-between">
+                    <span style={{ color: "var(--crm-text-dim)" }}>{formatUKDate(w.date)}</span>
+                    <span style={{ color: "var(--crm-amber)" }}>{formatPence(w.amountPence)}</span>
+                  </div>
+                  {w.note && (
+                    <p className="text-xs" style={{ color: "var(--crm-text-faint)" }}>
+                      {w.note}
+                    </p>
+                  )}
                 </li>
               ))}
             </ul>
           )}
+          <p className="text-xs mt-3" style={{ color: "var(--crm-text-faint)" }}>
+            Log a new withdrawal from the main Partners page.
+          </p>
         </Panel>
       </div>
 

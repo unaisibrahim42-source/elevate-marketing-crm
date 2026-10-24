@@ -1,24 +1,33 @@
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { Panel, EmptyState } from "@/components/crm/ui";
 import { formatPence } from "@/lib/money";
 import { formatUKDate } from "@/lib/dates";
-import { createAllocationAction, toggleAllocationPaidAction, createExpenseAction } from "@/lib/actions/partner-actions";
+import { createExpenseAction, createWithdrawalAction, deleteWithdrawalAction } from "@/lib/actions/partner-actions";
 
 export default async function PartnersPage() {
-  const [partners, allocations, totalRevenue, totalExpenses, recentExpenses] = await Promise.all([
+  const [partners, totalRevenue, totalExpenses, recentExpenses, withdrawals] = await Promise.all([
     prisma.partner.findMany({ orderBy: { createdAt: "asc" }, include: { tasks: { where: { status: { not: "COMPLETED" } } } } }),
-    prisma.profitAllocation.findMany({ orderBy: { createdAt: "desc" }, include: { splits: { include: { partner: true } } }, take: 10 }),
     prisma.payment.aggregate({ where: { status: "CONFIRMED" }, _sum: { amountPence: true } }),
     prisma.expense.aggregate({ _sum: { amountPence: true } }),
     prisma.expense.findMany({ orderBy: { date: "desc" }, take: 6 }),
+    prisma.partnerWithdrawal.findMany({ orderBy: { date: "desc" }, include: { partner: true }, take: 20 }),
   ]);
 
   const shareholdingTotal = partners.reduce((s, p) => s + p.shareholdingPct, 0);
   const profitShareTotal = partners.reduce((s, p) => s + p.profitSharePct, 0);
   const revenue = totalRevenue._sum.amountPence ?? 0;
   const expenses = totalExpenses._sum.amountPence ?? 0;
+  const distributable = revenue - expenses;
+
+  const totalsByPartner = new Map<string, { withdrawn: number; reinvested: number }>();
+  for (const w of withdrawals) {
+    const existing = totalsByPartner.get(w.partnerId) ?? { withdrawn: 0, reinvested: 0 };
+    existing.withdrawn += w.amountPence;
+    existing.reinvested += w.reinvestedPence;
+    totalsByPartner.set(w.partnerId, existing);
+  }
 
   return (
     <div className="space-y-5">
@@ -33,28 +42,33 @@ export default async function PartnersPage() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-        {partners.map((p) => (
-          <Link key={p.id} href={`/crm/partners/${p.id}`} className="crm-panel p-4 hover:border-[var(--crm-cyan)] transition-colors">
-            <p className="font-semibold" style={{ color: "var(--crm-cyan)" }}>
-              {p.name}
-            </p>
-            <p className="text-xs" style={{ color: "var(--crm-text-dim)" }}>
-              {p.role}
-            </p>
-            <div className="flex items-center justify-between mt-3 text-sm">
-              <span style={{ color: "var(--crm-text-faint)" }}>Shareholding</span>
-              <span className="font-semibold">{p.shareholdingPct}%</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span style={{ color: "var(--crm-text-faint)" }}>Profit share</span>
-              <span className="font-semibold">{p.profitSharePct}%</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span style={{ color: "var(--crm-text-faint)" }}>Open tasks</span>
-              <span className="font-semibold">{p.tasks.length}</span>
-            </div>
-          </Link>
-        ))}
+        {partners.map((p) => {
+          const totals = totalsByPartner.get(p.id) ?? { withdrawn: 0, reinvested: 0 };
+          return (
+            <Link key={p.id} href={`/crm/partners/${p.id}`} className="crm-panel p-4 hover:border-[var(--crm-cyan)] transition-colors">
+              <p className="font-semibold" style={{ color: "var(--crm-cyan)" }}>
+                {p.name}
+              </p>
+              <p className="text-xs" style={{ color: "var(--crm-text-dim)" }}>
+                {p.role}
+              </p>
+              <div className="flex items-center justify-between mt-3 text-sm">
+                <span style={{ color: "var(--crm-text-faint)" }}>Profit share</span>
+                <span className="font-semibold">{p.profitSharePct}%</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span style={{ color: "var(--crm-text-faint)" }}>Taken out (all time)</span>
+                <span className="font-semibold">{formatPence(totals.withdrawn)}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span style={{ color: "var(--crm-text-faint)" }}>Reinvested (all time)</span>
+                <span className="font-semibold" style={{ color: "var(--crm-green)" }}>
+                  {formatPence(totals.reinvested)}
+                </span>
+              </div>
+            </Link>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -70,12 +84,12 @@ export default async function PartnersPage() {
             </div>
             <div className="flex justify-between pt-2 border-t" style={{ borderColor: "var(--crm-border)" }}>
               <span style={{ color: "var(--crm-text)" }}>Potentially distributable</span>
-              <span className="font-semibold">{formatPence(revenue - expenses)}</span>
+              <span className="font-semibold">{formatPence(distributable)}</span>
             </div>
           </div>
           <p className="text-xs mt-2" style={{ color: "var(--crm-text-faint)" }}>
-            All-time figures — revenue received is not automatically profit. Decide the actual distributable
-            amount below, after reserves and other costs.
+            All-time figures, shown for reference only — logging a withdrawal never changes these or the
+            Finance page. Revenue received is not automatically profit.
           </p>
 
           <form action={createExpenseAction} className="mt-4 pt-4 border-t space-y-2" style={{ borderColor: "var(--crm-border)" }}>
@@ -101,46 +115,83 @@ export default async function PartnersPage() {
           )}
         </Panel>
 
-        <Panel title="New Earnings Allocation" className="lg:col-span-2">
-          <form action={createAllocationAction} className="flex flex-wrap gap-2 mb-4">
-            <input name="periodLabel" placeholder="Period (e.g. October 2026)" required className="crm-input flex-1 min-w-40" />
-            <input name="distributableAmount" type="number" step="0.01" placeholder="Distributable amount (£)" required className="crm-input w-56" />
-            <button type="submit" className="crm-btn crm-btn-primary">
-              Calculate & Create
-            </button>
-          </form>
+        <Panel title="Partner Withdrawals" className="lg:col-span-2">
           <p className="text-xs mb-4" style={{ color: "var(--crm-text-faint)" }}>
-            Splits use each partner&apos;s current profit-share percentage at the moment of creation.
+            Each partner decides their own amount here — nothing is calculated for you. Your profit-share %
+            is shown as a reference only. What you take out and what you leave in the business are both
+            entirely up to you, and never change the Finance page.
           </p>
 
-          {allocations.length === 0 ? (
-            <EmptyState message="No distributions recorded yet." />
-          ) : (
-            <ul className="space-y-3">
-              {allocations.map((a) => (
-                <li key={a.id} className="crm-panel-raised p-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{a.periodLabel}</p>
-                    <form action={toggleAllocationPaidAction.bind(null, a.id, !a.paid)}>
-                      <button className="crm-badge" style={{ borderColor: a.paid ? "var(--crm-green)" : "var(--crm-amber)", color: a.paid ? "var(--crm-green)" : "var(--crm-amber)" }}>
-                        {a.paid ? "Paid" : "Mark Paid"}
-                      </button>
-                    </form>
+          <div className="space-y-3 mb-5">
+            {partners.map((p) => {
+              const suggested = Math.round((distributable * p.profitSharePct) / 100);
+              return (
+                <form
+                  key={p.id}
+                  action={createWithdrawalAction.bind(null, p.id)}
+                  className="crm-panel-raised p-3 flex flex-wrap items-end gap-2"
+                >
+                  <div className="min-w-24">
+                    <p className="text-sm font-medium">{p.name}</p>
+                    <p className="text-xs" style={{ color: "var(--crm-text-faint)" }}>
+                      {p.profitSharePct}% · suggested ref. {formatPence(suggested)}
+                    </p>
                   </div>
-                  <p className="text-xs" style={{ color: "var(--crm-text-faint)" }}>
-                    {formatPence(a.distributableAmountPence)} · {formatUKDate(a.createdAt)}
-                  </p>
-                  <div className="flex flex-wrap gap-3 mt-2 text-xs">
-                    {a.splits.map((s) => (
-                      <span key={s.id} style={{ color: "var(--crm-text-dim)" }}>
-                        {s.partner.name}: <span style={{ color: "var(--crm-cyan)" }}>{formatPence(s.amountPence)}</span> ({s.pct}%)
-                      </span>
-                    ))}
+                  <div>
+                    <label className="crm-label block mb-1">Taking out (£)</label>
+                    <input name="amount" type="number" step="0.01" required className="crm-input w-32" />
                   </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                  <div>
+                    <label className="crm-label block mb-1">Reinvesting (£)</label>
+                    <input name="reinvested" type="number" step="0.01" defaultValue="0" className="crm-input w-32" />
+                  </div>
+                  <div>
+                    <label className="crm-label block mb-1">Date</label>
+                    <input name="date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} className="crm-input w-auto" />
+                  </div>
+                  <div className="flex-1 min-w-32">
+                    <label className="crm-label block mb-1">Note</label>
+                    <input name="note" placeholder="Optional" className="crm-input" />
+                  </div>
+                  <button type="submit" className="crm-btn crm-btn-primary">
+                    Log
+                  </button>
+                </form>
+              );
+            })}
+          </div>
+
+          <div className="pt-4 border-t" style={{ borderColor: "var(--crm-border)" }}>
+            <p className="crm-label mb-2">History</p>
+            {withdrawals.length === 0 ? (
+              <EmptyState message="No withdrawals logged yet." />
+            ) : (
+              <ul className="space-y-2.5">
+                {withdrawals.map((w) => (
+                  <li key={w.id} className="flex items-center justify-between gap-3 text-sm">
+                    <div className="min-w-0">
+                      <span style={{ color: "var(--crm-text)" }}>{w.partner.name}</span>{" "}
+                      <span style={{ color: "var(--crm-text-faint)" }}>· {formatUKDate(w.date)}</span>
+                      {w.note && (
+                        <p className="text-xs truncate" style={{ color: "var(--crm-text-faint)" }}>
+                          {w.note}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span style={{ color: "var(--crm-amber)" }}>{formatPence(w.amountPence)} out</span>
+                      {w.reinvestedPence > 0 && <span style={{ color: "var(--crm-green)" }}>{formatPence(w.reinvestedPence)} in</span>}
+                      <form action={deleteWithdrawalAction.bind(null, w.partnerId, w.id)}>
+                        <button className="crm-btn-ghost crm-btn p-1.5" aria-label="Delete">
+                          <Trash2 size={12} />
+                        </button>
+                      </form>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </Panel>
       </div>
     </div>

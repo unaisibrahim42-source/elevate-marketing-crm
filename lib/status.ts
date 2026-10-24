@@ -33,6 +33,12 @@ const TONE_MAP: Record<string, StatusTone> = {
   UNPAID: "amber",
   IN_PROGRESS: "cyan",
   VIEWED: "cyan",
+  // leads
+  NEW_LEAD: "cyan",
+  NEGOTIATION: "amber",
+  PROPOSAL_SENT: "amber",
+  WON: "green",
+  LOST: "red",
 };
 
 export function statusTone(status: string | null | undefined): StatusTone {

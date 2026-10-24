@@ -7,6 +7,7 @@ import {
   Wallet,
   Contact,
   Handshake,
+  TrendingUp,
   Settings,
 } from "lucide-react";
 
@@ -19,6 +20,7 @@ export const CRM_NAV = [
   { href: "/crm/finance", label: "Finance", icon: Wallet },
   { href: "/crm/people", label: "People", icon: Contact },
   { href: "/crm/partners", label: "Partners", icon: Handshake },
+  { href: "/crm/leads", label: "Leads", icon: TrendingUp },
   { href: "/crm/settings", label: "Settings", icon: Settings },
 ] as const;
 
