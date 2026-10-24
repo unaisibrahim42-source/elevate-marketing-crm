@@ -2,8 +2,8 @@ import Image from "next/image";
 import { loginAction } from "@/lib/actions/auth-actions";
 
 const ERROR_MESSAGES: Record<string, string> = {
-  missing: "Enter your email and password.",
-  invalid: "That email or password isn't right.",
+  missing: "Enter your username and password.",
+  invalid: "That username or password isn't right.",
 };
 
 export default async function LoginPage({
@@ -37,17 +37,19 @@ export default async function LoginPage({
             <input type="hidden" name="next" value={next ?? "/crm/overview"} />
 
             <div>
-              <label htmlFor="email" className="crm-label block mb-1.5">
-                Email
+              <label htmlFor="username" className="crm-label block mb-1.5">
+                Username
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
+                id="username"
+                name="username"
+                type="text"
                 required
                 autoFocus
+                autoCapitalize="none"
+                autoCorrect="off"
                 className="crm-input"
-                placeholder="you@elevatecreativemedia.co.uk"
+                placeholder="Username"
               />
             </div>
 

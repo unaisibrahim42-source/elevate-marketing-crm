@@ -15,6 +15,7 @@ datasource db {
 model User {
   id           String   @id @default(cuid())
   name         String
+  username     String?  @unique
   email        String   @unique
   passwordHash String
   role         String   @default("TEAM") // PARTNER | TEAM | ADMIN

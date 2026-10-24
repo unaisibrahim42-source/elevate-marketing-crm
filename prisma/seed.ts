@@ -9,24 +9,30 @@ function hashPassword(password: string): string {
   return `${salt}:${hash}`;
 }
 
-async function main() {
-  const seedPassword = process.env.CRM_SEED_PASSWORD || "ChangeMe123!";
+// Fixed, shared credentials for the three partner accounts — set
+// unconditionally on every seed run (every deploy) so these always work,
+// by design, for this small shared-login setup.
+const PARTNER_PASSWORD = "ElevateMarketing.co.uk";
 
+async function main() {
   const partnersData = [
     {
       name: "Unais",
+      username: "Unaiselevate",
       email: "unais@elevatecreativemedia.co.uk",
       role: "Co-Founder",
       shareholdingPct: 34,
     },
     {
       name: "Jamal",
+      username: "Jamalelevate",
       email: "jamal@elevatecreativemedia.co.uk",
       role: "Co-Founder",
       shareholdingPct: 33,
     },
     {
       name: "Sazid",
+      username: "Sazidelevate",
       email: "sazid@elevatecreativemedia.co.uk",
       role: "Co-Founder",
       shareholdingPct: 33,
@@ -34,18 +40,20 @@ async function main() {
   ];
 
   for (const p of partnersData) {
-    const existingUser = await prisma.user.findUnique({ where: { email: p.email } });
-    const user =
-      existingUser ??
-      (await prisma.user.create({
-        data: {
-          name: p.name,
-          email: p.email,
-          passwordHash: hashPassword(seedPassword),
-          role: "PARTNER",
-          jobTitle: p.role,
-        },
-      }));
+    const passwordHash = hashPassword(PARTNER_PASSWORD);
+
+    const user = await prisma.user.upsert({
+      where: { email: p.email },
+      update: { username: p.username, passwordHash },
+      create: {
+        name: p.name,
+        username: p.username,
+        email: p.email,
+        passwordHash,
+        role: "PARTNER",
+        jobTitle: p.role,
+      },
+    });
 
     await prisma.partner.upsert({
       where: { userId: user.id },
@@ -84,9 +92,8 @@ async function main() {
     });
   }
 
-  console.log("Seeded 3 partner accounts (Unais, Jamal, Sazid).");
-  console.log(`Default password for all seeded accounts: ${seedPassword}`);
-  console.log("Change this after first login in /crm/settings.");
+  console.log("Synced 3 partner accounts (Unaiselevate, Jamalelevate, Sazidelevate).");
+  console.log(`Shared password for all three: ${PARTNER_PASSWORD}`);
 }
 
 main()

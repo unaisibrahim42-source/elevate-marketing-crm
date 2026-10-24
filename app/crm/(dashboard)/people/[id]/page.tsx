@@ -51,6 +51,10 @@ export default async function PersonDetailPage({
               <input name="name" defaultValue={person.name} className="crm-input" />
             </div>
             <div>
+              <label className="crm-label block mb-1.5">Username (for login)</label>
+              <input name="username" defaultValue={person.username ?? ""} className="crm-input" />
+            </div>
+            <div>
               <label className="crm-label block mb-1.5">Job title</label>
               <input name="jobTitle" defaultValue={person.jobTitle ?? ""} className="crm-input" />
             </div>

@@ -21,10 +21,10 @@ npm run db:seed               # creates Unais / Jamal / Sazid logins
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) — it redirects straight to the login screen. The
-seed script prints a temporary shared password (`ChangeMe123!` by default, or whatever
-`CRM_SEED_PASSWORD` is set to) — log in with any of the three seeded emails and change it immediately
-from **Settings → Change My Password**.
+Open [http://localhost:3000](http://localhost:3000) — it redirects straight to the login screen. Log in
+with username `Unaiselevate`, `Jamalelevate` or `Sazidelevate` and the shared password
+`ElevateMarketing.co.uk`. These are reset to these exact values on every seed run (i.e. every deploy) —
+see `prisma/seed.ts` if you want to change that.
 
 ## Structure
 
@@ -52,10 +52,11 @@ intentionally left as "configure before use" rather than faked:
 - **Email sending** — not configured by default. Until you set `CRM_SMTP_HOST` / `_USER` / `_PASS` /
   `_FROM`, contract-signing links are generated and shown for you to copy/share manually instead of
   being silently "sent". The Settings page shows live status for this.
-- **Database** — Postgres, via `DATABASE_URL`. The `vercel-build` script (`package.json`) runs
+- **Database** — Postgres, via `DATABASE_URL`. The `build` script (`package.json`) runs
   `prisma migrate deploy` and the seed script automatically on every deploy, so a first deploy to
-  Vercel sets itself up with no manual migration step. The seed is safe to re-run — it only creates
-  the three partner accounts if they don't already exist, so later deploys are a no-op there.
+  Vercel sets itself up with no manual migration step. The seed resets the three partner accounts'
+  username/password to the fixed values above on every run — deliberately, since this is a small
+  shared-login setup; see `prisma/seed.ts` to change that behaviour.
 - **File storage** — stored on local disk under `storage/uploads/` (gitignored), served only to
   logged-in users. **This does not persist on Vercel** (serverless filesystems reset between
   invocations) — fine for development, but swap in cloud storage (e.g. Supabase Storage or S3) before
@@ -68,11 +69,10 @@ intentionally left as "configure before use" rather than faked:
 3. In the Vercel project's **Settings → Environment Variables**, add:
    - `DATABASE_URL` — the Postgres connection string from step 1
    - `CRM_SESSION_SECRET` — a random 32+ char string (`openssl rand -hex 32`)
-   - `CRM_SEED_PASSWORD` — optional, otherwise defaults to `ChangeMe123!`
    - the `CRM_SMTP_*` and `CRM_NEWS_RSS_URL` vars, optionally, per "What's real vs. what needs
      configuring" above
 4. Deploy. The build runs migrations and seeds the three partner accounts automatically — log in with
-   any of their emails and the seed password, then change it from Settings immediately.
+   `Unaiselevate` / `Jamalelevate` / `Sazidelevate` and password `ElevateMarketing.co.uk`.
 5. The `/crm/login` screen is already the private password gate — no extra setup needed for that part.
    Add a custom domain from Vercel's project settings if you want one.
 

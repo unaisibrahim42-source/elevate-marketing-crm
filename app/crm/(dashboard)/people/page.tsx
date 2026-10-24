@@ -20,6 +20,7 @@ export default async function PeoplePage() {
         <p className="crm-label mb-3">Add Team Member</p>
         <form action={createPersonAction} className="flex flex-wrap gap-2">
           <input name="name" placeholder="Name" required className="crm-input w-auto flex-1 min-w-32" />
+          <input name="username" placeholder="Username (for login)" required className="crm-input w-auto" />
           <input name="email" type="email" placeholder="Email" required className="crm-input w-auto flex-1 min-w-48" />
           <input name="jobTitle" placeholder="Role / job title" className="crm-input w-auto" />
           <input name="phone" placeholder="Phone" className="crm-input w-auto" />

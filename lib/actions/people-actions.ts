@@ -19,13 +19,15 @@ export async function createPersonAction(formData: FormData) {
   const user = await requireUser();
   const name = str(formData, "name");
   const email = str(formData, "email")?.toLowerCase();
-  if (!name || !email) return;
+  const username = str(formData, "username");
+  if (!name || !email || !username) return;
 
   const tempPassword = randomBytes(6).toString("base64url");
 
   const person = await prisma.user.create({
     data: {
       name,
+      username,
       email,
       passwordHash: hashPassword(tempPassword),
       jobTitle: str(formData, "jobTitle"),
@@ -54,6 +56,7 @@ export async function updatePersonAction(personId: string, formData: FormData) {
     where: { id: personId },
     data: {
       name: str(formData, "name") ?? "",
+      username: str(formData, "username"),
       jobTitle: str(formData, "jobTitle"),
       phone: str(formData, "phone"),
       availability: str(formData, "availability") ?? "AVAILABLE",
