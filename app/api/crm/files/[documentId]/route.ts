@@ -4,6 +4,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { resolveStoredFilePath } from "@/lib/storage";
 
+// Reads the logged-in user's session and queries the DB on every request —
+// never prerender or analyze this at build time.
+export const dynamic = "force-dynamic";
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ documentId: string }> }) {
   const user = await getCurrentUser();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
