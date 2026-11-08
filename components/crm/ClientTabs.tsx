@@ -28,7 +28,7 @@ export default function ClientTabs({ clientId }: { clientId: string }) {
             href={href}
             className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide rounded whitespace-nowrap transition-colors"
             style={{
-              color: active ? "#140208" : "var(--crm-text-dim)",
+              color: active ? "#ffffff" : "var(--crm-text-dim)",
               background: active ? "var(--crm-lime)" : "transparent",
             }}
           >

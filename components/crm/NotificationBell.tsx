@@ -43,7 +43,7 @@ export default function NotificationBell({
         {initialUnread > 0 && (
           <span
             className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold"
-            style={{ background: "var(--crm-lime)", color: "#140208" }}
+            style={{ background: "var(--crm-lime)", color: "#ffffff" }}
           >
             {initialUnread > 9 ? "9+" : initialUnread}
           </span>

@@ -12,9 +12,9 @@ export default function SignaturePad({ name }: { name: string }) {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.fillStyle = "#18090f";
+    ctx.fillStyle = "#0c0c0d";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = "#cafb2a";
+    ctx.strokeStyle = "#e54343";
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
   }, []);
@@ -52,7 +52,7 @@ export default function SignaturePad({ name }: { name: string }) {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
-    ctx.fillStyle = "#18090f";
+    ctx.fillStyle = "#0c0c0d";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     if (hiddenInputRef.current) hiddenInputRef.current.value = "";
   }
