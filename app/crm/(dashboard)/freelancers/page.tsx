@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/crm/ui";
 import { formatPence } from "@/lib/money";
 import { createFreelancerAction, setFreelancerAvailabilityAction, deleteFreelancerAction } from "@/lib/actions/freelancer-actions";
 import InlineStatusSelect from "@/components/crm/InlineStatusSelect";
+import { FREELANCER_ROLES, freelancerRoleLabel, freelancerRoleGroupLabel } from "@/lib/freelancer-roles";
 
 const AVAILABILITY = ["AVAILABLE", "LIMITED", "BOOKED", "UNAVAILABLE"];
 const RATE_TYPES = ["HOURLY", "DAILY", "PER_PROJECT", "OTHER"];
@@ -51,7 +52,13 @@ export default async function FreelancersPage({
         <p className="crm-label mb-3">Add Freelancer</p>
         <form action={createFreelancerAction} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           <input name="name" placeholder="Name" required className="crm-input" />
-          <input name="role" placeholder="Role (e.g. Video Editor)" required className="crm-input" />
+          <select name="role" defaultValue="VIDEO_EDITOR" required className="crm-input crm-select">
+            {FREELANCER_ROLES.map((r) => (
+              <option key={r} value={r}>
+                {freelancerRoleLabel(r)}
+              </option>
+            ))}
+          </select>
           <input name="specialty" placeholder="Specialty (optional)" className="crm-input" />
           <select name="availability" defaultValue="AVAILABLE" className="crm-input crm-select">
             {AVAILABILITY.map((a) => (
@@ -118,73 +125,90 @@ export default async function FreelancersPage({
           <EmptyState message="No freelancers in the roster yet." />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
-          {freelancers.map((f) => (
-            <div key={f.id} className="crm-panel p-4 flex flex-col gap-2.5">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="font-semibold truncate" style={{ color: "var(--crm-cyan)" }}>
-                    {f.name}
-                  </p>
-                  <p className="text-xs truncate" style={{ color: "var(--crm-text-dim)" }}>
-                    {f.role}
-                    {f.specialty ? ` · ${f.specialty}` : ""}
-                  </p>
-                </div>
-                <InlineStatusSelect
-                  value={f.availability}
-                  options={AVAILABILITY}
-                  onChange={setFreelancerAvailabilityAction.bind(null, f.id)}
-                />
-              </div>
+        <div className="space-y-6">
+          {FREELANCER_ROLES.map((roleKey) => {
+            const group =
+              roleKey === "OTHER"
+                ? freelancers.filter((f) => !FREELANCER_ROLES.includes(f.role as (typeof FREELANCER_ROLES)[number]))
+                : freelancers.filter((f) => f.role === roleKey);
+            if (group.length === 0) return null;
 
-              {f.rating && (
-                <div className="flex items-center gap-0.5">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Star
-                      key={i}
-                      size={12}
-                      fill={i <= f.rating! ? "var(--crm-amber)" : "none"}
-                      style={{ color: "var(--crm-amber)" }}
-                    />
+            return (
+              <div key={roleKey}>
+                <p className="crm-label mb-2.5" style={{ color: "var(--crm-cyan)" }}>
+                  {freelancerRoleGroupLabel(roleKey)} <span style={{ color: "var(--crm-text-faint)" }}>({group.length})</span>
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                  {group.map((f) => (
+                    <div key={f.id} className="crm-panel p-4 flex flex-col gap-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-semibold truncate" style={{ color: "var(--crm-text)" }}>
+                            {f.name}
+                          </p>
+                          <p className="text-xs truncate" style={{ color: "var(--crm-text-dim)" }}>
+                            {freelancerRoleLabel(f.role)}
+                            {f.specialty ? ` · ${f.specialty}` : ""}
+                          </p>
+                        </div>
+                        <InlineStatusSelect
+                          value={f.availability}
+                          options={AVAILABILITY}
+                          onChange={setFreelancerAvailabilityAction.bind(null, f.id)}
+                        />
+                      </div>
+
+                      {f.rating && (
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map((i) => (
+                            <Star
+                              key={i}
+                              size={12}
+                              fill={i <= f.rating! ? "var(--crm-amber)" : "none"}
+                              style={{ color: "var(--crm-amber)" }}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="text-xs space-y-1" style={{ color: "var(--crm-text-dim)" }}>
+                        {f.rateAmountPence != null && (
+                          <p>
+                            Rate: <span style={{ color: "var(--crm-text)" }}>{formatPence(f.rateAmountPence)}{rateTypeSuffix(f.rateType)}</span>
+                          </p>
+                        )}
+                        {f.location && <p>{f.location}</p>}
+                        {f.email && <p className="truncate">{f.email}</p>}
+                        {f.phone && <p>{f.phone}</p>}
+                        {f.portfolioUrl && (
+                          <a href={f.portfolioUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:underline" style={{ color: "var(--crm-cyan)" }}>
+                            Portfolio <ExternalLink size={10} />
+                          </a>
+                        )}
+                      </div>
+
+                      {f.notes && (
+                        <p className="text-xs pt-2 border-t" style={{ borderColor: "var(--crm-border)", color: "var(--crm-text-faint)" }}>
+                          {f.notes}
+                        </p>
+                      )}
+
+                      <div className="flex items-center justify-between pt-2 mt-auto border-t" style={{ borderColor: "var(--crm-border)" }}>
+                        <Link href={`/crm/freelancers/${f.id}/edit`} className="text-xs hover:underline" style={{ color: "var(--crm-cyan)" }}>
+                          Edit
+                        </Link>
+                        <form action={deleteFreelancerAction.bind(null, f.id)}>
+                          <button className="crm-btn-ghost crm-btn p-1.5" aria-label="Remove">
+                            <Trash2 size={12} />
+                          </button>
+                        </form>
+                      </div>
+                    </div>
                   ))}
                 </div>
-              )}
-
-              <div className="text-xs space-y-1" style={{ color: "var(--crm-text-dim)" }}>
-                {f.rateAmountPence != null && (
-                  <p>
-                    Rate: <span style={{ color: "var(--crm-text)" }}>{formatPence(f.rateAmountPence)}{rateTypeSuffix(f.rateType)}</span>
-                  </p>
-                )}
-                {f.location && <p>{f.location}</p>}
-                {f.email && <p className="truncate">{f.email}</p>}
-                {f.phone && <p>{f.phone}</p>}
-                {f.portfolioUrl && (
-                  <a href={f.portfolioUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:underline" style={{ color: "var(--crm-cyan)" }}>
-                    Portfolio <ExternalLink size={10} />
-                  </a>
-                )}
               </div>
-
-              {f.notes && (
-                <p className="text-xs pt-2 border-t" style={{ borderColor: "var(--crm-border)", color: "var(--crm-text-faint)" }}>
-                  {f.notes}
-                </p>
-              )}
-
-              <div className="flex items-center justify-between pt-2 mt-auto border-t" style={{ borderColor: "var(--crm-border)" }}>
-                <Link href={`/crm/freelancers/${f.id}/edit`} className="text-xs hover:underline" style={{ color: "var(--crm-cyan)" }}>
-                  Edit
-                </Link>
-                <form action={deleteFreelancerAction.bind(null, f.id)}>
-                  <button className="crm-btn-ghost crm-btn p-1.5" aria-label="Remove">
-                    <Trash2 size={12} />
-                  </button>
-                </form>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { updateFreelancerAction } from "@/lib/actions/freelancer-actions";
+import { FREELANCER_ROLES, freelancerRoleLabel } from "@/lib/freelancer-roles";
 
 const AVAILABILITY = ["AVAILABLE", "LIMITED", "BOOKED", "UNAVAILABLE"];
 const RATE_TYPES = ["HOURLY", "DAILY", "PER_PROJECT", "OTHER"];
@@ -25,7 +26,16 @@ export default async function EditFreelancerPage({ params }: { params: Promise<{
           </div>
           <div>
             <label className="crm-label block mb-1.5">Role</label>
-            <input name="role" defaultValue={freelancer.role} required className="crm-input" />
+            <select name="role" defaultValue={freelancer.role} required className="crm-input crm-select">
+              {!FREELANCER_ROLES.includes(freelancer.role as (typeof FREELANCER_ROLES)[number]) && (
+                <option value={freelancer.role}>{freelancer.role}</option>
+              )}
+              {FREELANCER_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {freelancerRoleLabel(r)}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="crm-label block mb-1.5">Specialty</label>
