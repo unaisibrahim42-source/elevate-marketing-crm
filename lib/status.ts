@@ -39,6 +39,9 @@ const TONE_MAP: Record<string, StatusTone> = {
   PROPOSAL_SENT: "amber",
   WON: "green",
   LOST: "red",
+  // freelancers
+  AVAILABLE: "green",
+  BOOKED: "amber",
 };
 
 export function statusTone(status: string | null | undefined): StatusTone {

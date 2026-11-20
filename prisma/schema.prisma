@@ -381,6 +381,29 @@ model Lead {
   updatedAt          DateTime  @updatedAt
 }
 
+// ---------- Freelancers ----------
+// A roster of external people to call on for shoots/edits — video editors,
+// actors, videographers, photographers, etc. Not CRM users: no login, no
+// relation to User. Standalone contact book with rates and availability.
+
+model Freelancer {
+  id              String   @id @default(cuid())
+  name            String
+  role            String // e.g. Video Editor, Actor, Videographer, Photographer
+  specialty       String? // e.g. Drone footage, colour grading, on-camera host
+  email           String?
+  phone           String?
+  rateAmountPence Int?
+  rateType        String? // HOURLY | DAILY | PER_PROJECT | OTHER
+  availability    String   @default("AVAILABLE") // AVAILABLE | LIMITED | BOOKED | UNAVAILABLE
+  location        String?
+  portfolioUrl    String?
+  rating          Int? // 1-5, how good you rate working with them
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
 // ---------- Activity, notifications, settings ----------
 
 model ActivityLog {
